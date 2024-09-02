@@ -1,0 +1,47 @@
+[package]
+name = "compressed-aa"
+version = "0.1.0"
+description = "Created with Anchor"
+rust-version = "1.75.0" 
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "compressed_aa"
+
+# [features]
+# default = []
+# cpi = ["no-entrypoint"]
+# no-entrypoint = []
+# no-idl = []
+# no-log-ix-name = []
+# idl-build = ["anchor-lang/idl-build"]
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+custom-heap = ["light-heap"]
+default = ["custom-heap"]
+test-sbf = []
+bench-sbf = []
+
+[dependencies]
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+light-compressed-token = { version = "0.7.0", features = ["cpi"] }
+light-system-program = { version = "0.7.0", features = ["cpi"]}
+account-compression = { version = "0.7.0",  features = ["cpi"] }
+light-hasher = { version = "0.5.0" }
+light-heap = { version = "0.5.0", optional = true }
+light-macros = { version = "0.7.0" }
+light-sdk = { version = "0.5.0" }
+light-utils = { version = "0.5.0" }
+light-verifier = { version = "0.5.0" }
+
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+solana-sdk = { workspace = true }
+
+[dev-dependencies]
+solana-program-test = { workspace = true }
+light-test-utils = { version = "0.5.0" }
+tokio = "1.36.0"
