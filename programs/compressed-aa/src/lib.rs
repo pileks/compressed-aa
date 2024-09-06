@@ -1,7 +1,12 @@
 use light_sdk::{
+    address::derive_address_seed,
+    compressed_account::{input_compressed_account, new_compressed_account},
     light_account, light_accounts,
-    merkle_context::{PackedAddressMerkleContext, PackedMerkleContext, PackedMerkleOutputContext},
-    utils::{create_cpi_inputs_for_account_deletion, create_cpi_inputs_for_new_account},
+    merkle_context::{
+        unpack_address_merkle_context, PackedAddressMerkleContext, PackedMerkleContext,
+        PackedMerkleOutputContext,
+    },
+    utils::create_cpi_inputs_for_new_account,
     verify::verify,
     LightTraits,
 };
@@ -14,14 +19,6 @@ declare_id!("B3XHqAM39stZu3Rxd6NTRZJtVUsPZ1G6NsvLPETjV3v1");
 #[program]
 pub mod compressed_aa {
     use super::*;
-    use light_sdk::{
-        address::derive_address_seed,
-        compressed_account::{
-            input_compressed_account, new_compressed_account, output_compressed_account,
-        },
-        merkle_context::unpack_address_merkle_context,
-        utils::create_cpi_inputs_for_account_update,
-    };
 
     #[allow(clippy::too_many_arguments)]
     pub fn create_hotkey<'info>(
@@ -36,7 +33,7 @@ pub mod compressed_aa {
     ) -> Result<()> {
         let unpacked_address_merkle_context =
             unpack_address_merkle_context(address_merkle_context, ctx.remaining_accounts);
-        
+
         let address_seed = derive_address_seed(
             &[
                 wallet.key().to_bytes().as_slice(),
@@ -46,10 +43,7 @@ pub mod compressed_aa {
             &unpacked_address_merkle_context,
         );
 
-        let hotkey = Hotkey{
-            controller,
-            wallet
-        };
+        let hotkey = Hotkey { controller, wallet };
 
         let (compressed_account, new_address_params) = new_compressed_account(
             &hotkey,
@@ -62,7 +56,8 @@ pub mod compressed_aa {
         )?;
 
         let signer_seed = b"cpi_signer".as_slice();
-        let (_, bump) = Pubkey::find_program_address(&[signer_seed], &ctx.accounts.self_program.key());
+        let (_, bump) =
+            Pubkey::find_program_address(&[signer_seed], &ctx.accounts.self_program.key());
         let signer_seeds = [signer_seed, &[bump]];
 
         let inputs = create_cpi_inputs_for_new_account(
@@ -75,6 +70,47 @@ pub mod compressed_aa {
 
         verify(ctx, &inputs, &[&signer_seeds])?;
 
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn invoke_with_hotkey<'info>(
+        ctx: Context<'_, '_, '_, 'info, CompressedHotkeys<'info>>,
+        proof: CompressedProof,
+        merkle_context: PackedMerkleContext,
+        merkle_tree_root_index: u16,
+        address_merkle_context: PackedAddressMerkleContext,
+        wallet: Pubkey,
+        controller: Pubkey,
+        cpi_context: Option<CompressedCpiContext>,
+    ) -> Result<()> {
+        let unpacked_address_merkle_context =
+            unpack_address_merkle_context(address_merkle_context, ctx.remaining_accounts);
+        let address_seed = derive_address_seed(
+            &[
+                wallet.key().to_bytes().as_slice(),
+                controller.key().to_bytes().as_slice(),
+            ],
+            &crate::ID,
+            &unpacked_address_merkle_context,
+        );
+
+        let hotkey = Hotkey { controller, wallet };
+
+        let old_compressed_account = input_compressed_account(
+            &hotkey,
+            &address_seed,
+            &crate::ID,
+            &merkle_context,
+            merkle_tree_root_index,
+            &address_merkle_context,
+            ctx.remaining_accounts,
+        )?;
+
+        // TODO: Prove that this account is the actual account
+        // TODO: Do my own checks
+
+        // TODO: CPI BABYYYY
         Ok(())
     }
 }

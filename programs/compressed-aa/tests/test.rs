@@ -176,14 +176,11 @@ async fn create_hotkey<R: RpcConnection>(
         data: instruction_data.data(),
     };
 
-    let event_or_err = rpc
+    let event = rpc
         .create_and_send_transaction_with_event(&[instruction], &payer.pubkey(), &[payer], None)
-        .await;
+        .await
+        .unwrap()
+        .unwrap();
 
-    println!("AAAA {:?}", event_or_err);
-
-    match event_or_err {
-        Ok(event) => test_indexer.add_compressed_accounts_with_token_data(&event.unwrap().0),
-        Err(e) => println!("{}", e),
-    };
+    test_indexer.add_compressed_accounts_with_token_data(&event.0);
 }
